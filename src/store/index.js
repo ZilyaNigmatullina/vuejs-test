@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
-import api from '@/api';
+// import api from '@/api';
+import getPayments from '../mocks/getPayments';
 
 Vue.use(Vuex);
 
@@ -8,8 +9,10 @@ export default new Vuex.Store({
 
   state: () => ({
     data: [],
+    pageCount: 1,
     isLoading: false,
     isCached: false,
+    cachedData: new Map(),
   }),
 
   mutations: {
@@ -25,17 +28,34 @@ export default new Vuex.Store({
         }
       });
     },
+    setCachedData(state, { key = '', response }) {
+      state.cachedData.set(key, response);
+    },
+    clearCachedData(state) {
+      state.cachedData.clear();
+    },
   },
 
   actions: {
-    async load({ commit }, params = {}) {
+    async load({ state, commit, dispatch }, params = {}) {
       commit('setState', { isLoading: true });
 
       try {
-        const { data } = await api.getPayments(params);
+        const key = JSON.stringify(Object.fromEntries(Object.entries(params).sort(([, a], [, b]) => a - b)));
+
+        if
+        (state.cachedData.has(key)) {
+          const { data, pageCount } = state.cachedData.get(key);
+          commit('setState', { data, pageCount });
+          return;
+        }
+
+        const response = await getPayments(params); // api.getPayments(params)
+        const { data, pageCount } = response;
 
         if (Array.isArray(data)) {
-          commit('setState', { data });
+          commit('setState', { data, pageCount });
+          dispatch('cache', { key, response });
         }
       } catch (e) {
         // eslint-disable-next-line no-alert
@@ -43,6 +63,14 @@ export default new Vuex.Store({
       } finally {
         commit('setState', { isLoading: false });
       }
+    },
+    cache({ commit }, { key = '', response }) {
+      commit('setCachedData', { key, response });
+      commit('setState', { isCached: true });
+    },
+    clearCache({ commit }) {
+      commit('clearCachedData');
+      commit('setState', { isCached: false });
     },
   },
 });

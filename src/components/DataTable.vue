@@ -1,10 +1,19 @@
 <template>
   <div class="data-table">
     <div class="data-table__filter">
-      <ui-money v-model="moneyFilter" />
+      <ui-money v-model="moneyFilter" @input="onInput" />
     </div>
 
-    <!-- Your component code here -->
+    <div v-if="!isLoading" class="data-table__table">
+      <ui-table v-if="rows.length" :rows="rows" :columns="columns">
+        <template v-for="(_, name) in $scopedSlots" v-slot:[name]="slotData">
+          <slot :name="name" v-bind="slotData" />
+        </template>
+      </ui-table>
+      <div v-else class="data-table__empty-message">
+        Ничего не найдено
+      </div>
+    </div>
 
     <div class="data-table__paginator">
       <ui-pagination
@@ -16,6 +25,9 @@
 </template>
 
 <script>
+import _ from 'lodash';
+import { mapState } from 'vuex';
+
 export default {
 
   name: 'DataTable',
@@ -29,6 +41,10 @@ export default {
       type: Array,
       required: true,
     },
+    pageCount: {
+      type: Number,
+      required: true,
+    },
   },
 
   data: () => ({
@@ -38,9 +54,30 @@ export default {
   }),
 
   computed: {
-    pageCount() {
-      return Math.ceil(this.rows.length / this.pageSize);
+    ...mapState([
+      'isLoading',
+    ]),
+  },
+
+  watch: {
+    page: {
+      handler() {
+        this.emitUpdate();
+      },
+      immediate: true,
     },
+  },
+
+  methods: {
+    emitUpdate() {
+      const params = { page: this.page, pageSize: this.pageSize, money: this.moneyFilter };
+      this.$emit('update', params);
+    },
+    // eslint-disable-next-line func-names
+    onInput: _.debounce(function () {
+      this.page = 1;
+      this.emitUpdate();
+    }, 700),
   },
 };
 </script>

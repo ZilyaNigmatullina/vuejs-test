@@ -1,31 +1,41 @@
 <template>
-  <main class="container mt-md-5">
+  <main class="app-content container mt-md-5">
 
     <!-- Loading spinner -->
-    <ui-spinner v-if="isLoading" />
+    <div v-if="isLoading" class="app-content__spinner-block" @click.stop>
+      <ui-spinner />
+    </div>
 
-    <template v-else>
-      <ui-alert v-if="isCached" type="success" header="Data was cached!">
-        <template #default>
-          <p>You can clear cache and load data again.</p>
-        </template>
-        <template #footer>
-          <ui-button type="primary">
-            Clear cache
-          </ui-button>
-        </template>
-      </ui-alert>
+    <ui-alert v-if="isCached" type="success" header="Data was cached!">
+      <template #default>
+        <p>You can clear cache and load data again.</p>
+      </template>
+      <template #footer>
+        <ui-button type="primary" @click="clearCache">
+          Clear cache
+        </ui-button>
+      </template>
+    </ui-alert>
 
-      <data-table
-        :rows="data"
-        :columns="columns"
-      />
-    </template>
+    <data-table
+      :rows="data"
+      :columns="columns"
+      :page-count="pageCount"
+      @update="load({...$event})"
+    >
+      <template #col(date)="{ row }">
+        {{ dateFormat(row.date) }}
+      </template>
+      <template #col(money)="{ row }">
+        {{ moneyFormat(row.money) }}
+      </template>
+    </data-table>
   </main>
 </template>
 
 <script>
 import { mapActions, mapState } from 'vuex';
+import { dateFormat, moneyFormat } from '../utils/filters';
 
 export default {
 
@@ -61,17 +71,17 @@ export default {
       'isLoading',
       'isCached',
       'data',
+      'pageCount',
     ]),
-  },
-
-  created() {
-    this.load();
   },
 
   methods: {
     ...mapActions([
       'load',
+      'clearCache',
     ]),
+    dateFormat,
+    moneyFormat,
   },
 };
 </script>
